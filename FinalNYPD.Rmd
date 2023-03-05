@@ -1,0 +1,137 @@
+---
+title: "NYPD Shooting Incident Data Report"
+author: "Y.Saito"
+date: '2023-03-03'
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Importance of reproducibility
+
+Reproducibility is important factor to provide objectivity, persuasiveness with its underlying data, and future research/analysis.
+
+### The steps in the data science process
+
+The key elements of the data science are;
+
+1. Explore
+2. Wrangle
+3. Program
+4. Model
+5. Communicate
+
+source: The table of contents from a book "**R for Data Science**" by Hadley Wickham and Garrett Grolemund 
+https://r4ds.had.co.nz/
+
+Here are the steps on this report;
+
+- Search relevant source data
+- Import data
+- Look at data
+    - *and tidy*
+- Visualize data 
+- Output data in report format
+
+In a column 'PERP_AGE_GROUP', some error figures were found, such as {224,940,1020}. They should be replaced with 'UNKNOWN'.
+
+For the columns 'PERP_AGE_GROUP',	'PERP_SEX',	and 'PERP_RACE', about 40% of records were either missing or 'UNKNOWN'. Though the remaining 60% of valid records could produce some valuable information.
+
+```{r}
+# Import libraries
+library(tidyverse)
+library(lubridate)
+```
+
+## Importing data
+
+```{r}
+# Import external csv data 
+url_in <- "https://data.cityofnewyork.us/api/views/833y-fsy8/rows.csv?accessType=DOWNLOAD"
+cases <- read_csv(url_in)
+```
+
+```{r summary of NYPD shooting incidents data}
+# check data
+glimpse(cases)
+summary(cases)
+```
+```{r Month}
+# Change the data type from "character" to "date"
+dates <- cases %>%
+  mutate(OCCUR_DATE = lubridate::mdy(OCCUR_DATE))
+# Extract number of incidents each month
+m_table <- table(month(dates$OCCUR_DATE))
+# Plot
+barplot(m_table, main="Monthly Trend")
+```
+
+It shows the monthly trend. In winter, the number of incidents goes down.
+```{r Hour}
+# Change the data type from "character" to "period"
+times <- cases %>%
+  mutate(OCCUR_TIME = lubridate::hms(OCCUR_TIME))
+# Extract number of incidents each hour
+h_table <- table(hour(times$OCCUR_TIME))
+# Plot
+plot(h_table, main="Hourly Trend", col=rgb(1,0,1), type="l")
+```
+
+The incident rate is the highest around the midnight, and the lowest in a morning, around commuting hours. 
+
+```{r location}
+# Generate a table; List of Boroughs(rows) and Number of incidents(column).
+# Prepare empty table
+loca_table <- matrix(0,5,3)
+# Set column names
+colnames(loca_table) <- c("incidents","population","per 1000")
+# Set row names
+rownames(loca_table) <- rownames(table(cases$BORO))
+# Insert the number of incidents in each Boroughs
+loca_table[,1] <- table(cases$BORO)
+# Insert the population in each Boroughs 
+loca_table[,2] <- c(1472654,2736074,1694251,2405464,495747)
+# Insert the incidents-rate per 1000 people
+loca_table[,3] <- loca_table[,1] / loca_table[,2] * 1000
+# Output the table
+loca_table
+```
+Boroughs population data from;
+http://www.citypopulation.de/en/usa/newyorkcity/
+(referred date: 2023/03/03)
+```{r pi-chart}
+# Insert BORO-wise incidents-rate per 1000 into a variable
+pie.per1000 <- c(loca_table[,3])
+# Calculate percents
+pct <- round(c(loca_table[,3])/sum(c(loca_table[,3]))*100) 
+# Add percents to labels
+lbls <- paste(rownames(loca_table), pct) 
+# Add % to labels
+lbls <- paste(lbls,"%",sep="") 
+# Plot
+pie(pie.per1000,labels = lbls, main="Location Trend")
+
+```
+
+Location Trend is based on Incident Rate per 1000 people (= Number of incidents / Population * 1000); 
+Further analysis should be held on age groups, races, locations + races, locations + age groups, and so forth.
+```{r Murder Flag,include=FALSE}
+# 要素数をMFlg別にカウントして円グラフ作成
+MurderFlg <- cases %>% select(STATISTICAL_MURDER_FLAG
+)
+MurderFlg  
+```
+```{r Victim Age Group,include=FALSE}
+# 要素数を被害者年齢別にカウントして棒グラフ作成
+VicAge <- cases %>% select(VIC_AGE_GROUP)
+VicAge  
+```
+
+## Conclusion and Bias
+The data is cumulative over the period of 2006-2021. The analysis of “Monthly Trend”, “Daily Trend”, and “Location Trend” over the period is worth comparing to the latest data, i.e., an analysis with the data of just 2021. By comparing them yearly basis, we may find how the urban development progress, as well as the economy, affects the incidents.
+
+An example of bias the data may consist of is the column ‘PERP_RACE’. The number of a certain minority race is extremely high (10668/25596) compare to the other races(the sum of five other races was just 3782/25596, while the data also contains ‘NA’ and ‘UNKNOWN’ which sum is 11146/25596. There could be a some sort of manipulation or intention over these figures. My personal bias is as well the observation above. I see the US as a nation of diversity, thus I naturally have paid attention to the ‘PERP_RACE’ column, but this is just my bias. I must pay attention to other columns and any correlations to reduce the effect of a personal bias over the analysis.

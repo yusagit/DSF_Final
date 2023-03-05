@@ -120,13 +120,11 @@ pie(pie.per1000,labels = lbls, main="Location Trend")
 Location Trend is based on Incident Rate per 1000 people (= Number of incidents / Population * 1000); 
 Further analysis should be held on age groups, races, locations + races, locations + age groups, and so forth.
 ```{r Murder Flag,include=FALSE}
-# 要素数をMFlg別にカウントして円グラフ作成
 MurderFlg <- cases %>% select(STATISTICAL_MURDER_FLAG
 )
 MurderFlg  
 ```
 ```{r Victim Age Group,include=FALSE}
-# 要素数を被害者年齢別にカウントして棒グラフ作成
 VicAge <- cases %>% select(VIC_AGE_GROUP)
 VicAge  
 ```
